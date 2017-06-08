@@ -9,6 +9,8 @@ import akka.event.Logging;
 import akka.event.LoggingAdapter;
 import tensortrain.datatype.Tensor;
 import tensortrain.message.ArgsInitializationMsg;
+import tensortrain.message.MoveUSTuple;
+import tensortrain.message.OrthoFinish;
 /**
  * 
  * @author yihau
@@ -21,6 +23,8 @@ public class PartitionWorker extends UntypedActor{
 	private int rank;
 	private int numOfSubtensor;
 	private ArrayList<Tensor> subTensors = null;
+	private int mergeCount = 0;
+	private ActorRef mergeDestActor = null;
 	
 	@Override
 	public void onReceive(Object message) throws Exception {
@@ -36,8 +40,20 @@ public class PartitionWorker extends UntypedActor{
 				Tensor tempTensor = originTensor.slice(2, i, i+1);
 				subTensors.add(tempTensor);
 			}
-			
-			ActorRef actor = getContext().actorOf(Props.create(CalculationWorker.class), "");
+			for(int i = 0; i < numOfSubtensor; i++){
+			ActorRef actor = getContext().actorOf(Props.create(CalculationWorker.class), "calculationWorker"+i);
+				actor.tell(subTensors.get(i), ActorRef.noSender());
+			}
+		}else if(message instanceof OrthoFinish){
+			mergeCount ++;
+			//mergeCount=2的时候，发消息给actor让他把ustuple发给mergedestactor,并且重置mergecount和mergeactor
+			if(mergeCount == 2 && mergeDestActor != null){
+				getSender().tell(new MoveUSTuple(), mergeDestActor);
+				mergeCount = 0;
+				mergeDestActor = null;
+			}else{//mergeCount=1的时候，只是记录下此actor为mergedestactor。
+				mergeDestActor = getSender();
+			}
 		}
 		
 	}
