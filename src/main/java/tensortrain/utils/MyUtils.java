@@ -1,5 +1,10 @@
 package tensortrain.utils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 import tensortrain.datatype.Vec;
@@ -10,6 +15,34 @@ import tensortrain.message.USTuple;
  * @date 2017年6月7日
  */
 public class MyUtils {
+	
+	
+	public static class Tuple {
+        private double norm;
+        private Vec vector;
+        public Tuple(double norm, Vec vector) {
+            this.norm = norm;
+            this.vector = vector;
+        }
+
+        public double getNorm(){ return norm; }
+        public Vec getVector() { return vector; }
+    }
+	
+	
+	public static class TupleComparator implements Comparator<Tuple>{
+
+		@Override
+		public int compare(Tuple o1, Tuple o2) {
+			 if(o1.getNorm() > o2.getNorm())
+	                return -1;
+	            else if(o1.getNorm() < o2.getNorm())
+	                return 1;
+	            else
+	                return 0;
+		}
+		
+	}
 	/**
 	 * 包装奇异值分解的u矩阵，返回u；
 	 * @param decom
@@ -161,14 +194,77 @@ public class MyUtils {
 	 * @param U
 	 * @param tol
 	 */
-	public static void doInnerOrth(Matrix U, double tol) {
-        int maxSteps = 1000;
+	public static USTuple doInnerOrth(Matrix U, double tol) {
+		int maxSteps = 1000;
+		List<Tuple> normVecList = null;
+		USTuple result = null;
 
         for (int i = 0; i < maxSteps; i++) {
             boolean con = innerOrth(U, tol);
             if (con) {
+            	//============================================//
+            	System.out.println("未归一化之前的矩阵：");
+            	U.print(10, 4);
+            	System.out.println("#############################################");
+            	normVecList = new ArrayList<Tuple>();
+
+                 for(int j = 0; j < U.getColumnDimension(); j++){
+                	 Vec colVec = from1DArray(getCol(U, j));
+                	 double norm = colVec.norm();
+                	 normVecList.add(new Tuple(norm, colVec.divide(norm)));
+                 }
+
+                 //对存放Tuple的list进行排序，按照降序顺序
+//                 normVecList.sort(new TupleComparator());
+                 Collections.sort(normVecList,new TupleComparator());
+
+
+                 for(int j = 0; j < U.getColumnDimension(); j++) {
+                    for(int k = 0; k < U.getRowDimension(); k++){
+                    	double data = normVecList.get(j).getVector().get(k);                   	
+                    	U.set(k, j, data);
+                    }
+//                    System.out.println(normVecList.get(j).getNorm());
+                 }
+            	//=======================================================//
+            	Matrix uMatrix = sliceByCol(U, 0, U.getColumnDimension()/2-1);
+            	double[] sData = new double[U.getColumnDimension()/2];
+            	for(int h = 0; h < sData.length; h++){
+            		double data = normVecList.get(h).getNorm();
+            		sData[h] = data;
+            	}
+            	Matrix sMatrix = from1DtoSMatrix(sData);
+            	result = new USTuple(uMatrix, sMatrix);
+            	
+            	
                 break;
             }
         }
+        return result;
     }
+	public static Matrix sliceByCol(Matrix m,int from, int to) {
+        int max_col = Math.max(from,to);
+        int min_col = Math.min(from, to);
+        int slice_col = max_col - min_col + 1;
+        Matrix result = new Matrix(m.getRowDimension(), slice_col);
+        for(int i = 0; i < m.getRowDimension(); i++) {
+            for(int j = 0; j < slice_col; j++) {
+                result.set(i,j,m.get(i,j+min_col));
+            }
+        }
+        return result;
+    }
+	
+	public static Matrix from1DtoSMatrix(double[] data){
+		int length = data.length;
+		Matrix result = new Matrix(length, length);
+		for(int i = 0; i < length; i++){
+			for(int j = 0; j < length; j++){
+				if(i == j)result.set(i, j, data[i]);
+				else result.set(i, j, 0.0);
+			}
+		}
+		return result;
+	}
+	
 }
