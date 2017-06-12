@@ -48,7 +48,9 @@ public class Tensor {
 		distance[rank-1] = 1;
 	}
 	
-	
+	public void setData(double[] data){
+		this.data = data;
+	}
 	
 	public double[] getData() {
 		return data;
@@ -116,7 +118,7 @@ public class Tensor {
 	}
 	/**
 	 * 张量的模一展开，这里tt中只需要模一展开即可。
-	 * @return
+	 * @return  展开的矩阵
 	 */
 	public Matrix matricization() {
 		//dims[0]模一的长度

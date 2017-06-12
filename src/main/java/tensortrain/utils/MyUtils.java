@@ -203,9 +203,9 @@ public class MyUtils {
             boolean con = innerOrth(U, tol);
             if (con) {
             	//============================================//
-            	System.out.println("未归一化之前的矩阵：");
-            	U.print(10, 4);
-            	System.out.println("#############################################");
+//            	System.out.println("未归一化之前的矩阵：");
+//            	U.print(10, 4);
+//            	System.out.println("#############################################");
             	normVecList = new ArrayList<Tuple>();
 
                  for(int j = 0; j < U.getColumnDimension(); j++){

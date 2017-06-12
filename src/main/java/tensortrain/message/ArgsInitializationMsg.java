@@ -1,27 +1,55 @@
 package tensortrain.message;
 
-import tensortrain.datatype.Tensor;
+import java.io.Serializable;
+
+import Jama.Matrix;
 
 /**
  * 
  * @author yihau
  * @date 2017年6月5日
  */
-public class ArgsInitializationMsg {
-	private Tensor tensor;
-
-	public ArgsInitializationMsg(Tensor tensor) {
+public class ArgsInitializationMsg implements Serializable{
+	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Matrix matrix;
+	private int step;
+	private int dim;
+	
+	public ArgsInitializationMsg(Matrix matrix, int step, int dim) {
 		super();
-		this.tensor = tensor;
+		this.matrix = matrix;
+		this.step = step;
+		this.dim = dim;
 	}
 
-	public Tensor getTensor() {
-		return tensor;
+	public Matrix getMatrix() {
+		return matrix;
 	}
 
-	public void setTensor(Tensor tensor) {
-		this.tensor = tensor;
+	public void setMatrix(Matrix matrix) {
+		this.matrix = matrix;
 	}
+
+	public int getStep() {
+		return step;
+	}
+
+	public void setStep(int step) {
+		this.step = step;
+	}
+
+	public int getDim() {
+		return dim;
+	}
+
+	public void setDim(int dim) {
+		this.dim = dim;
+	}
+	
 	
 	
 }
