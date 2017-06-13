@@ -17,14 +17,27 @@ public class ArgsInitializationMsg implements Serializable{
 	private static final long serialVersionUID = 1L;
 	private Matrix matrix;
 	private int step;
+	private int rank;
 	private int dim;
 	
-	public ArgsInitializationMsg(Matrix matrix, int step, int dim) {
+	public ArgsInitializationMsg(Matrix matrix, int step, int rank, int dim) {
 		super();
 		this.matrix = matrix;
 		this.step = step;
+		this.rank = rank;
 		this.dim = dim;
 	}
+
+	
+	public int getRank() {
+		return rank;
+	}
+
+
+	public void setRank(int rank) {
+		this.rank = rank;
+	}
+
 
 	public Matrix getMatrix() {
 		return matrix;
