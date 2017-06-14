@@ -90,7 +90,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 			this.originMatrix = argsInitializationMsg.getMatrix();
 			this.step = argsInitializationMsg.getStep();
 			this.numOfMatrix = argsInitializationMsg.getDim();
-			log.info("第"+step+"次切分的矩阵个数：" + numOfMatrix);
+//			log.info("第"+step+"次切分的矩阵个数：" + numOfMatrix);
 			//切分矩阵
 			this.subMatrixs = new ArrayList<Matrix>();
 			int distance = originMatrix.getColumnDimension()/numOfMatrix;
@@ -131,13 +131,15 @@ public class SplitAndMergeWorker extends UntypedActor{
 			UMatrix matrix = (UMatrix) message;
 			Iterable<ActorRef> iterable = getContext().children();
 			Iterator<ActorRef> actorRefs = iterable.iterator();
+			System.out.println("+++++++++++++uMatrix++++++++++++++++++");
+			matrix.getuMatrix().print(10, 4);
 			while(actorRefs.hasNext()){
 				ActorRef oneActor = actorRefs.next();
 				oneActor.tell(matrix, ActorRef.noSender());
 			}
 		}else if(message instanceof ModifyMatrix){
 			//组合矩阵，然后发送给父节点开始下一次迭代
-			log.info(getSender().path() + " received modigyMatrix");
+//			log.info(getSender().path() + " received modigyMatrix");
 			ModifyMatrix data = (ModifyMatrix) message;
 				resultCount ++;
 				modifyMatrixs.add(data);

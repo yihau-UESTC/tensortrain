@@ -143,9 +143,17 @@ public class MyUtils {
 	public static void main(String[] args){
 		double[][] data = {{1,2,3},{4,5,6}};
 		Matrix m = new Matrix(data);
-		Vec v = from1DArray(getCol(m, 2));
-		doInnerOrth(m, 0.1);
-		m.print(10, 4);
+		USTuple t1 = svd(m);
+		t1.getuMatrix().print(10, 4);
+		t1.getsMatrix().print(10, 4);
+		double[][] data2 = {{7,8,9},{10,11,12}};
+		Matrix m2 = new Matrix(data2);
+		USTuple t2 = svd(m2);
+		t2.getuMatrix().print(10, 4);
+		t2.getsMatrix().print(10, 4);
+		USTuple tuple = doInnerOrth(t1.getuMatrix().times(t1.getsMatrix()),
+				t2.getuMatrix().times(t2.getsMatrix()),0.001);
+		tuple.getuMatrix().print(10, 4);
 	}
 	/**
 	 * 对矩阵m做一次sweep来正交化矩阵
@@ -153,15 +161,15 @@ public class MyUtils {
 	 * @param tol 误差系数
 	 * @return 是否收敛
 	 */
-	private static boolean innerOrth(Matrix block, double tol) {
-        Matrix uMatrix = block;
+	private static boolean innerOrth(Matrix block1, Matrix block2, double tol) {
+//        Matrix uMatrix = block;
         boolean converged = true;
 
         //一次round-robin循环，一次sweep来正交化矩阵
-        for(int i = 0; i < block.getColumnDimension() -1; i++) {
-            for(int j = i+1; j < block.getColumnDimension(); j++) {
-                Vec di = from1DArray(getCol(block, i));
-                Vec dj = from1DArray(getCol(block, j));
+        for(int i = 0; i < block1.getColumnDimension() ; i++) {
+            for(int j = 0; j < block2.getColumnDimension(); j++) {
+                Vec di = from1DArray(getCol(block1, i));
+                Vec dj = from1DArray(getCol(block2, j));
                 double dii = di.dot(di);
                 double dij = di.dot(dj);
                 double djj = dj.dot(dj);
@@ -177,11 +185,11 @@ public class MyUtils {
 
                     //update data block
                     //乘以旋转矩阵
-                    for(int k = 0; k < block.getRowDimension(); k++) {
-                        double res1 = block.get(k, i) * c - block.get(k, j) * s;
-                        double res2 = block.get(k, i) * s + block.get(k, j) * c;
-                        uMatrix.set(k,i,res1);
-                        uMatrix.set(k,j,res2);
+                    for(int k = 0; k < block1.getRowDimension(); k++) {
+                        double res1 = block1.get(k, i) * c - block2.get(k, j) * s;
+                        double res2 = block1.get(k, i) * s + block2.get(k, j) * c;
+                        block1.set(k,i,res1);
+                        block2.set(k,j,res2);
                     }
 
                 }
@@ -194,18 +202,19 @@ public class MyUtils {
 	 * @param U
 	 * @param tol
 	 */
-	public static USTuple doInnerOrth(Matrix U, double tol) {
+	public static USTuple doInnerOrth(Matrix U1,Matrix U2, double tol) {
 		int maxSteps = 1000;
 		List<Tuple> normVecList = null;
 		USTuple result = null;
 
         for (int i = 0; i < maxSteps; i++) {
-            boolean con = innerOrth(U, tol);
+            boolean con = innerOrth(U1, U2, tol);
             if (con) {
             	//============================================//
 //            	System.out.println("未归一化之前的矩阵：");
 //            	U.print(10, 4);
 //            	System.out.println("#############################################");
+            	Matrix U = add(U1, U2);
             	normVecList = new ArrayList<Tuple>();
 
                  for(int j = 0; j < U.getColumnDimension(); j++){
@@ -226,17 +235,33 @@ public class MyUtils {
                     }
 //                    System.out.println(normVecList.get(j).getNorm());
                  }
+                 //======================================================//
+                 System.out.println("未裁剪的u================================");
+                 U.print(10, 4);
+                 System.out.println("对应的S");
+                 for(int ii = 0; ii < normVecList.size(); ii++){
+                	 System.out.print(normVecList.get(ii).getNorm()+ "   ");
+                 }
+                 System.out.println();
             	//=======================================================//
-            	Matrix uMatrix = sliceByCol(U, 0, U.getColumnDimension()/2-1);
-            	double[] sData = new double[U.getColumnDimension()/2];
-            	for(int h = 0; h < sData.length; h++){
-            		double data = normVecList.get(h).getNorm();
-            		sData[h] = data;
-            	}
-            	Matrix sMatrix = from1DtoSMatrix(sData);
-            	result = new USTuple(uMatrix, sMatrix);
-            	
-            	
+                 int sLength = 0;
+                 Matrix uMatrix;
+				if (U.getRowDimension() < U.getColumnDimension()) {
+					uMatrix = sliceByCol(U, 0,
+							U.getColumnDimension() / 2 - 1);
+					sLength = U.getColumnDimension() / 2;
+					
+				}else {
+					uMatrix = U.copy();
+					sLength = U.getColumnDimension();
+				}
+				double[] sData = new double[sLength];
+				for (int h = 0; h < sData.length; h++) {
+					double data = normVecList.get(h).getNorm();
+					sData[h] = data;
+				}
+				Matrix sMatrix = from1DtoSMatrix(sData);
+				result = new USTuple(uMatrix, sMatrix);
                 break;
             }
         }

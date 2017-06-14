@@ -35,8 +35,8 @@ public class MasterWorker extends UntypedActor{
 		}else if(message instanceof ComposeMatrix){
 			ComposeMatrix composeMatrix = (ComposeMatrix) message;
 			Matrix matrix = composeMatrix.getData();
-			System.out.println("======================");
-			matrix.print(10, 4);
+//			System.out.println("==========composeMatrix============");
+//			matrix.print(10, 4);
 			currentStep ++;
 			if(currentStep <= step){
 				

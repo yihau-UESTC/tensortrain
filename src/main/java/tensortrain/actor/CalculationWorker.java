@@ -29,7 +29,7 @@ public class CalculationWorker extends UntypedActor{
 	@Override
 	public void preStart() throws Exception {
 		// TODO Auto-generated method stub
-		log.info(getSelf().path() + "has been constructed !!!");
+//		log.info(getSelf().path() + "has been constructed !!!");
 	}
 
 
@@ -37,7 +37,7 @@ public class CalculationWorker extends UntypedActor{
 	public void onReceive(Object message) throws Exception {
 		//第一次迭代接收到分块的张量。
 		if(message instanceof OriginCalculateData){
-			log.info("origincalculatedata");
+//			log.info("origincalculatedata");
 			OriginCalculateData data = (OriginCalculateData) message;
 			Matrix matrix = data.getMatrix();
 			this.id = data.getId();
@@ -48,25 +48,25 @@ public class CalculationWorker extends UntypedActor{
 			getContext().parent().tell(new OrthoFinish(), getSelf());
 		}else if(message instanceof MoveUSTuple){
 			//移动tuple给合成节点
-			log.info("moveustuple");
+//			log.info("moveustuple");
 			getSender().tell(tuple, ActorRef.noSender());
 		}else if(message instanceof USTuple){
 			//合成矩阵
-			log.info("ustuple");
+//			log.info("ustuple");
 			USTuple receivedTuple = (USTuple) message;
 			Matrix u1 = tuple.getuMatrix();
 			Matrix s1 = tuple.getsMatrix();
 			Matrix u2 = receivedTuple.getuMatrix();
 			Matrix s2 = receivedTuple.getsMatrix();
-			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
-			tuple = MyUtils.doInnerOrth(combinMatrix, 0.1);
+//			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
+			tuple = MyUtils.doInnerOrth(u1.times(s1), u2.times(s2), 0.1);
 			getContext().parent().tell(new OrthoFinish(), getSelf());
 		}else if(message instanceof SendUMatrix){
 			//将u矩阵回传给父节点。
-			log.info("sendumatrix");
+//			log.info("sendumatrix");
 			getSender().tell(new UMatrix(tuple.getuMatrix()), ActorRef.noSender());
 		}else if(message instanceof UMatrix){
-			log.info("umatrix");
+//			log.info("umatrix");
 			UMatrix uMatrix = (UMatrix) message;
 			Matrix matrix = uMatrix.getuMatrix();
 			//接下来对u进行转置，然后乘以origin矩阵。

@@ -51,11 +51,11 @@ public class Test {
 		Jama.Matrix c2 = u2.times(s2);		
 		Jama.Matrix m = MyUtils.add(c1, c2);
 		m.print(10, 4);
-		USTuple result= MyUtils.doInnerOrth(m, 0.1);
-		Matrix u = result.getuMatrix();
-		Matrix s = result.getsMatrix();
-		u.print(10, 4);
-		s.print(10, 4);
+//		USTuple result= MyUtils.doInnerOrth(m, 0.1);
+//		Matrix u = result.getuMatrix();
+//		Matrix s = result.getsMatrix();
+//		u.print(10, 4);
+//		s.print(10, 4);
 //		int numOfSubtensor = 7;
 //		int queue = numOfSubtensor;
 //		int result = numOfSubtensor;
