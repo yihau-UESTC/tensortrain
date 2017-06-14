@@ -5,7 +5,6 @@ import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import tensortrain.datatype.Tensor;
 import tensortrain.message.ModifyMatrix;
 import tensortrain.message.MoveUSTuple;
 import tensortrain.message.OriginCalculateData;
@@ -35,7 +34,7 @@ public class CalculationWorker extends UntypedActor{
 
 	@Override
 	public void onReceive(Object message) throws Exception {
-		//第一次迭代接收到分块的张量。
+		//收到计算单元，做svd分解。
 		if(message instanceof OriginCalculateData){
 //			log.info("origincalculatedata");
 			OriginCalculateData data = (OriginCalculateData) message;
@@ -44,15 +43,15 @@ public class CalculationWorker extends UntypedActor{
 			originMatrix = matrix.copy();
 			//svd分解，然后将u，s装进tuple。
 			tuple = MyUtils.svd(matrix);
+			
 			//将tuple发送给父节点partionworker
 			getContext().parent().tell(new OrthoFinish(), getSelf());
+			
 		}else if(message instanceof MoveUSTuple){
 			//移动tuple给合成节点
 //			log.info("moveustuple");
 			getSender().tell(tuple, ActorRef.noSender());
 		}else if(message instanceof USTuple){
-			//合成矩阵
-//			log.info("ustuple");
 			USTuple receivedTuple = (USTuple) message;
 			Matrix u1 = tuple.getuMatrix();
 			Matrix s1 = tuple.getsMatrix();
@@ -60,6 +59,10 @@ public class CalculationWorker extends UntypedActor{
 			Matrix s2 = receivedTuple.getsMatrix();
 //			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
 			tuple = MyUtils.doInnerOrth(u1.times(s1), u2.times(s2), 0.1);
+
+//			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
+//			tuple = MyUtils.doInnerOrth(combinMatrix, 0.1);
+//			tuple = MyUtils.svd(combinMatrix);
 			getContext().parent().tell(new OrthoFinish(), getSelf());
 		}else if(message instanceof SendUMatrix){
 			//将u矩阵回传给父节点。
@@ -67,6 +70,8 @@ public class CalculationWorker extends UntypedActor{
 			getSender().tell(new UMatrix(tuple.getuMatrix()), ActorRef.noSender());
 		}else if(message instanceof UMatrix){
 //			log.info("umatrix");
+			//由u矩阵和原始矩阵块得到纠正后的s*v矩阵u‘A
+			log.info("umatrix");
 			UMatrix uMatrix = (UMatrix) message;
 			Matrix matrix = uMatrix.getuMatrix();
 			//接下来对u进行转置，然后乘以origin矩阵。

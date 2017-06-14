@@ -36,7 +36,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 	private int step;
 	private int numOfMatrix;
 	private ArrayList<Matrix> subMatrixs = null;
-	
+	private int rank;
 	private int oneMergeCount = 0;
 	private ActorRef mergeDestActor = null;
 	private int allMergeCount = 0;
@@ -46,49 +46,14 @@ public class SplitAndMergeWorker extends UntypedActor{
 	
 	
 	
-	
-	public int calculateMergeNum(int tensorBlocks){
-		int queue = tensorBlocks;
-		int result = tensorBlocks;
-		while(queue != 1){
-			int i = queue/2;
-//			int j = queue%2;
-			result += i;
-			queue -= i;
-		}
-		return result;
-	}
-	
-	public Matrix composeMatrix(ArrayList<ModifyMatrix> list){
-		int col = list.get(0).getMatrix().getColumnDimension();
-		int row = 0;
-		for (ModifyMatrix matrix : list) {
-			row += matrix.getMatrix().getRowDimension();
-		}
-		Matrix composeMatrix = new Matrix(row, col);
-		int rowInitial = 0;
-		int rowFinal = 0;
-		int colInitial = 0;
-		int colFinal = col - 1;
-		for(int i = 0; i < list.size(); i++){
-			for(int j = 0; j < list.size(); j++){
-				if(list.get(j).getId() == i){
-					rowFinal = rowInitial + list.get(j).getMatrix().getRowDimension() - 1;
-					composeMatrix.setMatrix(rowInitial, rowFinal, colInitial, colFinal, list.get(j).getMatrix());
-					rowInitial = rowFinal + 1; 
-				}
-			}
-			
-		}
-		return composeMatrix;
-	}
 	@Override
 	public void onReceive(Object message) throws Exception {
 		if(message instanceof ArgsInitializationMsg){
-			//初始化参数
+			//初始化参数本次迭代的参数
 			ArgsInitializationMsg argsInitializationMsg = (ArgsInitializationMsg) message;
 			this.originMatrix = argsInitializationMsg.getMatrix();
 			this.step = argsInitializationMsg.getStep();
+			this.rank = argsInitializationMsg.getRank();
 			this.numOfMatrix = argsInitializationMsg.getDim();
 //			log.info("第"+step+"次切分的矩阵个数：" + numOfMatrix);
 			//切分矩阵
@@ -112,6 +77,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 				actor.tell(new OriginCalculateData(i, subMatrixs.get(i)), ActorRef.noSender());
 			}
 		}else if(message instanceof OrthoFinish){
+			//统计svd完成的块，控制其两两合并
 			allMergeCount++;
 			if (allMergeCount < allMergeNum) {
 				oneMergeCount++;
@@ -128,7 +94,10 @@ public class SplitAndMergeWorker extends UntypedActor{
 				getSender().tell(new SendUMatrix(), getSelf());
 			}
 		}else if(message instanceof UMatrix){
+			//将U矩阵发送给各个下层计算节点
 			UMatrix matrix = (UMatrix) message;
+			System.out.println("第"+ step +"个TT核");
+			matrix.getuMatrix().print(10, 4);
 			Iterable<ActorRef> iterable = getContext().children();
 			Iterator<ActorRef> actorRefs = iterable.iterator();
 			System.out.println("+++++++++++++uMatrix++++++++++++++++++");
@@ -144,12 +113,89 @@ public class SplitAndMergeWorker extends UntypedActor{
 				resultCount ++;
 				modifyMatrixs.add(data);
 			if (resultCount >= numOfMatrix) {
-				Matrix composeMatrix = composeMatrix(modifyMatrixs);
+				Matrix composeMatrix;
+				if (this.step < rank - 1) {
+					composeMatrix = composeByRowMatrix(modifyMatrixs);
+				} else {
+					composeMatrix = composeByColMatrix(modifyMatrixs);
+				}
 				getContext().parent().tell(new ComposeMatrix(composeMatrix), ActorRef.noSender());
 			}
 		}
 		
 		
+	}
+	/**
+	 * 计算两两合并这些矩阵块一共需要的次数
+	 * @param matrixBlocks 矩阵块的个数
+	 * @return 个数
+	 */
+	public int calculateMergeNum(int matrixBlocks){
+		int queue = matrixBlocks;
+		int result = matrixBlocks;
+		while(queue != 1){
+			int i = queue/2;
+//			int j = queue%2;
+			result += i;
+			queue -= i;
+		}
+		return result;
+	}
+	/**
+	 * 将list中的矩阵按行排列成一个大的矩阵
+	 * @param list
+	 * @return
+	 */
+	public Matrix composeByRowMatrix(ArrayList<ModifyMatrix> list){
+		int col = list.get(0).getMatrix().getColumnDimension();
+		int row = 0;
+		for (ModifyMatrix matrix : list) {
+			row += matrix.getMatrix().getRowDimension();
+		}
+		Matrix composeMatrix = new Matrix(row, col);
+		int rowInitial = 0;
+		int rowFinal = 0;
+		int colInitial = 0;
+		int colFinal = col - 1;
+		for(int i = 0; i < list.size(); i++){
+			for(int j = 0; j < list.size(); j++){
+				if(list.get(j).getId() == i){
+					rowFinal = rowInitial + list.get(j).getMatrix().getRowDimension() - 1;
+					composeMatrix.setMatrix(rowInitial, rowFinal, colInitial, colFinal, list.get(j).getMatrix());
+					rowInitial = rowFinal + 1; 
+				}
+			}
+			
+		}
+		return composeMatrix;
+	}
+	/**
+	 * 按列排列成一个矩阵
+	 * @param list
+	 * @return
+	 */
+	public Matrix composeByColMatrix(ArrayList<ModifyMatrix> list){
+		int row = list.get(0).getMatrix().getRowDimension();
+		int col = 0;
+		for (ModifyMatrix matrix : list) {
+			col += matrix.getMatrix().getColumnDimension();
+		}
+		Matrix composeMatrix = new Matrix(row, col);
+		int rowInitial = 0;
+		int rowFinal = row - 1;
+		int colInitial = 0;
+		int colFinal = 0;
+		for(int i = 0; i < list.size(); i++){
+			for(int j = 0; j < list.size(); j++){
+				if(list.get(j).getId() == i){
+					colFinal = colInitial + list.get(j).getMatrix().getColumnDimension() - 1;
+					composeMatrix.setMatrix(rowInitial, rowFinal, colInitial, colFinal, list.get(j).getMatrix());
+					colInitial = colFinal + 1; 
+				}
+			}
+			
+		}
+		return composeMatrix;
 	}
 
 }
