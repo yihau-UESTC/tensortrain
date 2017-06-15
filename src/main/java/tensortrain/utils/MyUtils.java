@@ -244,23 +244,47 @@ public class MyUtils {
                  }
                  System.out.println();
             	//=======================================================//
-                 int sLength = 0;
-                 Matrix uMatrix;
-				if (U.getRowDimension() < U.getColumnDimension()) {
-					uMatrix = sliceByCol(U, 0,
-							U.getColumnDimension() / 2 - 1);
-					sLength = U.getColumnDimension() / 2;
-					
-				}else {
-					uMatrix = U.copy();
-					sLength = U.getColumnDimension();
-				}
-				double[] sData = new double[sLength];
-				for (int h = 0; h < sData.length; h++) {
-					double data = normVecList.get(h).getNorm();
-					sData[h] = data;
-				}
-				Matrix sMatrix = from1DtoSMatrix(sData);
+                 int uSize = U.getRowDimension();
+                 Matrix uMatrix = new Matrix(uSize, uSize);
+                 Matrix sMatrix = new Matrix(uSize, U.getColumnDimension());
+                 int max = U.getRowDimension() > U.getColumnDimension() ? U.getRowDimension() : U.getColumnDimension();
+                 for(int ii = 0; ii < max; ii++){
+                	 for(int j = 0; j < max; j++){
+                		 if(ii < uSize && j < uSize && ii < U.getRowDimension() && j < U.getColumnDimension()){
+                			 double value = U.get(ii, j);
+                			 uMatrix.set(ii, j, value);
+                		 }
+                	 }
+                 }
+                 for(int ii = 0; ii < uSize; ii++){
+                	 for(int j = 0; j < U.getColumnDimension(); j++){
+                		 if(ii == j){
+                			 sMatrix.set(ii, j, normVecList.get(ii).getNorm());
+                		 }
+                	 }
+                 }
+                 
+                 
+                 //=======================================================//
+                 
+                 
+//                 int sLength = 0;
+//                 Matrix uMatrix;
+//				if (U.getRowDimension() < U.getColumnDimension()) {
+//					uMatrix = sliceByCol(U, 0,
+//							U.getColumnDimension() / 2 - 1);
+//					sLength = U.getColumnDimension() / 2;
+//					
+//				}else {
+//					uMatrix = U.copy();
+//					sLength = U.getColumnDimension();
+//				}
+//				double[] sData = new double[sLength];
+//				for (int h = 0; h < sData.length; h++) {
+//					double data = normVecList.get(h).getNorm();
+//					sData[h] = data;
+//				}
+//				Matrix sMatrix = from1DtoSMatrix(sData);
 				result = new USTuple(uMatrix, sMatrix);
                 break;
             }

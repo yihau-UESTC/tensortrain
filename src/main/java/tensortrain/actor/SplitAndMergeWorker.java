@@ -4,12 +4,17 @@ import java.util.ArrayList;
 
 import Jama.Matrix;
 import akka.actor.ActorRef;
+import akka.actor.Address;
+import akka.actor.Deploy;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.japi.Option;
+import akka.remote.RemoteScope;
 import scala.collection.Iterator;
 import scala.collection.immutable.Iterable;
+import tensortrain.datatype.IPAndLevelTuple;
 import tensortrain.datatype.Tensor;
 import tensortrain.message.ArgsInitializationMsg;
 import tensortrain.message.ComposeMatrix;
@@ -19,6 +24,7 @@ import tensortrain.message.OriginCalculateData;
 import tensortrain.message.OrthoFinish;
 import tensortrain.message.SendUMatrix;
 import tensortrain.message.UMatrix;
+import tensortrain.utils.ActorLoadBalance;
 /**
  * 
  * @author yihau
@@ -43,7 +49,15 @@ public class SplitAndMergeWorker extends UntypedActor{
 	private int allMergeNum = 0;
 	private int resultCount = 0;
 	private ArrayList<ModifyMatrix> modifyMatrixs = new ArrayList<ModifyMatrix>();
+	private ActorLoadBalance alb;
+	private String ip;
 	
+	public SplitAndMergeWorker(ArrayList<IPAndLevelTuple> list,String ip1) {
+		// TODO Auto-generated constructor stub
+		this.alb = new ActorLoadBalance(list);
+		this.ip = ip1;
+		alb.set(ip1);
+	}
 	
 	
 	@Override
@@ -73,7 +87,10 @@ public class SplitAndMergeWorker extends UntypedActor{
 			this.allMergeNum = calculateMergeNum(numOfMatrix);
 			//发送子矩阵到对应的计算节点
 			for(int i = 0; i < numOfMatrix; i++){
-			ActorRef actor = getContext().actorOf(Props.create(CalculationWorker.class), "calculationWorker"+i);
+				String host = alb.get();
+				Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
+				ActorRef actor = getContext().actorOf(Props.create(CalculationWorker.class)
+					.withDeploy(new Deploy(new RemoteScope(addr))), "calculationWorker"+i);
 				actor.tell(new OriginCalculateData(i, subMatrixs.get(i)), ActorRef.noSender());
 			}
 		}else if(message instanceof OrthoFinish){
@@ -120,6 +137,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 					composeMatrix = composeByColMatrix(modifyMatrixs);
 				}
 				getContext().parent().tell(new ComposeMatrix(composeMatrix), ActorRef.noSender());
+				getSelf().tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
 			}
 		}
 		

@@ -58,8 +58,9 @@ public class CalculationWorker extends UntypedActor{
 			Matrix u2 = receivedTuple.getuMatrix();
 			Matrix s2 = receivedTuple.getsMatrix();
 //			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
-			tuple = MyUtils.doInnerOrth(u1.times(s1), u2.times(s2), 0.1);
-
+			tuple = MyUtils.doInnerOrth(u1.times(s1), u2.times(s2), 0.0001);
+			System.out.println("================sMatrix=============");
+			tuple.getsMatrix().print(10, 4);
 //			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
 //			tuple = MyUtils.doInnerOrth(combinMatrix, 0.1);
 //			tuple = MyUtils.svd(combinMatrix);

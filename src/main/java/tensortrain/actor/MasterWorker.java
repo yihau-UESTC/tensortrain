@@ -1,14 +1,21 @@
 package tensortrain.actor;
 
+import java.util.ArrayList;
+
 import Jama.Matrix;
 import akka.actor.ActorRef;
+import akka.actor.Address;
+import akka.actor.Deploy;
 import akka.actor.Props;
 import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import akka.remote.RemoteScope;
+import tensortrain.datatype.IPAndLevelTuple;
 import tensortrain.datatype.Tensor;
 import tensortrain.message.ArgsInitializationMsg;
 import tensortrain.message.ComposeMatrix;
+import tensortrain.utils.ActorLoadBalance;
 /**
  * 
  * @author yihau
@@ -20,6 +27,11 @@ public class MasterWorker extends UntypedActor{
 	private Tensor originTensor;
 	private int currentStep;
 	private int step;
+	private ArrayList<IPAndLevelTuple> list;
+	
+	public MasterWorker(ArrayList<IPAndLevelTuple> list){
+		this.list = list;
+	}
 	
 	@Override
 	public void onReceive(Object message) throws Exception {
@@ -28,8 +40,16 @@ public class MasterWorker extends UntypedActor{
 			this.originTensor = (Tensor) message;
 			this.currentStep = 1;
 			this.step = originTensor.getRank();
-			ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class), 
+			//========================================================//
+		
+			
+			String host = list.get(0).getIp();
+			Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
+			
+			ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class, list,host)
+					.withDeploy(new Deploy(new RemoteScope(addr))), 
 					"SplitAndMergeWorker" + currentStep);
+			
 			Matrix matrix = originTensor.matricization();
 			actor.tell(new ArgsInitializationMsg(matrix, currentStep, originTensor.getRank(), 
 					originTensor.getDims()[currentStep]), ActorRef.noSender());
@@ -40,8 +60,18 @@ public class MasterWorker extends UntypedActor{
 //			matrix.print(10, 4);
 			currentStep ++;
 			if(currentStep < step){
+				ArrayList<IPAndLevelTuple> list = new ArrayList<>();
+				String ip1 = "192.168.1.1";
+				String ip2 = "192.168.1.2";
+				String ip3 = "192.168.1.3";
+				list.add(new IPAndLevelTuple(0, ip1));
+				list.add(new IPAndLevelTuple(0, ip2));
+				list.add(new IPAndLevelTuple(0, ip3));
+				String host = ip1;
+				Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
 				
-				ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class), 
+				ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class,list,ip1)
+						.withDeploy(new Deploy(new RemoteScope(addr))), 
 						"SplitAndMergeWorker" + currentStep);
 				actor.tell(new ArgsInitializationMsg(matrix, currentStep, originTensor.getRank(),
 						originTensor.getDims()[currentStep]), ActorRef.noSender());
@@ -50,6 +80,8 @@ public class MasterWorker extends UntypedActor{
 				matrix.print(10, 4);
 			}
 			
+			
+		}else if (message instanceof String){
 			
 		}
 		
