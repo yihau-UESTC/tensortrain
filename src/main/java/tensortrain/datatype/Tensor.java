@@ -1,5 +1,7 @@
 package tensortrain.datatype;
 
+import java.io.Serializable;
+
 import Jama.Matrix;
 
 /**
@@ -7,7 +9,11 @@ import Jama.Matrix;
  * @author yihau
  * @date 2017年6月4日
  */
-public class Tensor {
+public class Tensor implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	//用一维数组来存储数据。
 	private double[] data = null;
 	//张量的阶数

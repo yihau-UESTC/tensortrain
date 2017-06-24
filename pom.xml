@@ -8,20 +8,20 @@
   <dependencies>
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
-			<artifactId>akka-actor_2.10</artifactId>
-			<version>2.3.15</version>
+			<artifactId>akka-actor_2.11</artifactId>
+			<version>2.4.17</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
-			<artifactId>akka-remote_2.10</artifactId>
-			<version>2.3.15</version>
+			<artifactId>akka-remote_2.11</artifactId>
+			<version>2.4.17</version>
 		</dependency>
 
 		<dependency>
 			<groupId>com.typesafe.akka</groupId>
-			<artifactId>akka-kernel_2.10</artifactId>
-			<version>2.3.15</version>
+			<artifactId>akka-kernel_2.11</artifactId>
+			<version>2.4.17</version>
 		</dependency>
 
 		<dependency>

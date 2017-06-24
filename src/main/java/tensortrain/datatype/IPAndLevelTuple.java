@@ -1,5 +1,6 @@
 package tensortrain.datatype;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +9,11 @@ import java.util.Iterator;
 import java.util.PriorityQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 
-public class IPAndLevelTuple implements Comparable<IPAndLevelTuple>{
+public class IPAndLevelTuple implements Comparable<IPAndLevelTuple>,Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private int num;
 	private String ip;
 	public IPAndLevelTuple(int num, String ip) {

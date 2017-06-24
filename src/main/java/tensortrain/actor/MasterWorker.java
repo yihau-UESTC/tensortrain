@@ -27,10 +27,12 @@ public class MasterWorker extends UntypedActor{
 	private Tensor originTensor;
 	private int currentStep;
 	private int step;
-	private ArrayList<IPAndLevelTuple> list;
+	private ArrayList<String> list;
+	private ActorLoadBalance alb;
 	
-	public MasterWorker(ArrayList<IPAndLevelTuple> list){
+	public MasterWorker(ArrayList<String> list){
 		this.list = list;
+		alb = new ActorLoadBalance(list);
 	}
 	
 	@Override
@@ -43,10 +45,11 @@ public class MasterWorker extends UntypedActor{
 			//========================================================//
 		
 			
-			String host = list.get(0).getIp();
+			String host = alb.get();
+//			String host = "192.168.1.119";
 			Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
 			
-			ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class, list,host)
+			ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class, this.alb)
 					.withDeploy(new Deploy(new RemoteScope(addr))), 
 					"SplitAndMergeWorker" + currentStep);
 			
@@ -60,17 +63,18 @@ public class MasterWorker extends UntypedActor{
 //			matrix.print(10, 4);
 			currentStep ++;
 			if(currentStep < step){
-				ArrayList<IPAndLevelTuple> list = new ArrayList<>();
-				String ip1 = "192.168.1.1";
-				String ip2 = "192.168.1.2";
-				String ip3 = "192.168.1.3";
-				list.add(new IPAndLevelTuple(0, ip1));
-				list.add(new IPAndLevelTuple(0, ip2));
-				list.add(new IPAndLevelTuple(0, ip3));
-				String host = ip1;
+//				ArrayList<IPAndLevelTuple> list = new ArrayList<>();
+				String ip1 = "192.168.1.119";
+//				String ip2 = "192.168.1.2";
+//				String ip3 = "192.168.1.3";
+//				list.add(new IPAndLevelTuple(0, ip1));
+//				list.add(new IPAndLevelTuple(0, ip2));
+//				list.add(new IPAndLevelTuple(0, ip3));
+				String host = alb.get();
+//				String host = ip1;
 				Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
 				
-				ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class,list,ip1)
+				ActorRef actor = getContext().actorOf(Props.create(SplitAndMergeWorker.class,alb)
 						.withDeploy(new Deploy(new RemoteScope(addr))), 
 						"SplitAndMergeWorker" + currentStep);
 				actor.tell(new ArgsInitializationMsg(matrix, currentStep, originTensor.getRank(),
@@ -78,6 +82,7 @@ public class MasterWorker extends UntypedActor{
 			}else{
 				System.out.println("第"+ step +"个TT核");
 				matrix.print(10, 4);
+				
 			}
 			
 			

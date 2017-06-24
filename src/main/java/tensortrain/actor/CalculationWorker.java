@@ -28,7 +28,7 @@ public class CalculationWorker extends UntypedActor{
 	@Override
 	public void preStart() throws Exception {
 		// TODO Auto-generated method stub
-//		log.info(getSelf().path() + "has been constructed !!!");
+		log.info(getSelf().path() + "has been constructed !!!");
 	}
 
 

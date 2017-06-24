@@ -52,14 +52,22 @@ public class SplitAndMergeWorker extends UntypedActor{
 	private ActorLoadBalance alb;
 	private String ip;
 	
-	public SplitAndMergeWorker(ArrayList<IPAndLevelTuple> list,String ip1) {
+	public SplitAndMergeWorker(ActorLoadBalance alb ) {
 		// TODO Auto-generated constructor stub
-		this.alb = new ActorLoadBalance(list);
-		this.ip = ip1;
-		alb.set(ip1);
+		this.alb = alb;
 	}
 	
 	
+	
+	@Override
+	public void preStart() throws Exception {
+		// TODO Auto-generated method stub
+		super.preStart();
+		log.info(getSelf()+"has been constructed!!!");
+	}
+
+
+
 	@Override
 	public void onReceive(Object message) throws Exception {
 		if(message instanceof ArgsInitializationMsg){
@@ -88,6 +96,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 			//发送子矩阵到对应的计算节点
 			for(int i = 0; i < numOfMatrix; i++){
 				String host = alb.get();
+//				String host = "192.168.1.119";
 				Address addr = new Address("akka.tcp", "WorkerSystem", host, 2555);
 				ActorRef actor = getContext().actorOf(Props.create(CalculationWorker.class)
 					.withDeploy(new Deploy(new RemoteScope(addr))), "calculationWorker"+i);
