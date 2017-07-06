@@ -1,5 +1,7 @@
 package tensortrain.actor;
 
+import org.apache.log4j.Logger;
+
 import Jama.Matrix;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
@@ -20,6 +22,7 @@ import tensortrain.utils.MyUtils;
  */
 public class CalculationWorker extends UntypedActor{
 	LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+//	Logger logger = Logger.getLogger(CalculationWorker.class);
 	private Matrix originMatrix;
 	private USTuple tuple;
 	private int id;
@@ -50,7 +53,7 @@ public class CalculationWorker extends UntypedActor{
 		}else if(message instanceof MoveUSTuple){
 			//移动tuple给合成节点
 //			log.info("moveustuple");
-			getSender().tell(tuple, ActorRef.noSender());
+			getSender().tell(tuple, ActorRef.noSender());//
 		}else if(message instanceof USTuple){
 			USTuple receivedTuple = (USTuple) message;
 			Matrix u1 = tuple.getuMatrix();
@@ -58,9 +61,9 @@ public class CalculationWorker extends UntypedActor{
 			Matrix u2 = receivedTuple.getuMatrix();
 			Matrix s2 = receivedTuple.getsMatrix();
 //			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
-			tuple = MyUtils.doInnerOrth(u1.times(s1), u2.times(s2), 0.0001);
-			System.out.println("================sMatrix=============");
-			tuple.getsMatrix().print(10, 4);
+			tuple = MyUtils.doInnerOrth2(u1.times(s1), u2.times(s2), 0.0001);
+//			System.out.println("================sMatrix=============");
+//			tuple.getsMatrix().print(10, 4);
 //			Matrix combinMatrix = MyUtils.add(u1.times(s1), u2.times(s2));
 //			tuple = MyUtils.doInnerOrth(combinMatrix, 0.1);
 //			tuple = MyUtils.svd(combinMatrix);

@@ -2,6 +2,8 @@ package tensortrain.actor;
 
 import java.util.ArrayList;
 
+import org.apache.log4j.Logger;
+
 import Jama.Matrix;
 import akka.actor.ActorRef;
 import akka.actor.Address;
@@ -22,17 +24,19 @@ import tensortrain.utils.ActorLoadBalance;
  * @date 2017年6月12日
  */
 public class MasterWorker extends UntypedActor{
-
+//	Logger logger = Logger.getLogger(MasterWorker.class);
 	LoggingAdapter log = Logging.getLogger(getContext().system(), this); 
 	private Tensor originTensor;
 	private int currentStep;
 	private int step;
 	private ArrayList<String> list;
 	private ActorLoadBalance alb;
+	private long time;
 	
-	public MasterWorker(ArrayList<String> list){
+	public MasterWorker(ArrayList<String> list, long time){
 		this.list = list;
 		alb = new ActorLoadBalance(list);
+		this.time = time;
 	}
 	
 	@Override
@@ -82,7 +86,9 @@ public class MasterWorker extends UntypedActor{
 			}else{
 				System.out.println("第"+ step +"个TT核");
 				matrix.print(10, 4);
-				
+				long endTime = System.currentTimeMillis();
+				long usedTime = endTime - this.time;
+				log.info("usedTime: ", usedTime);
 			}
 			
 			

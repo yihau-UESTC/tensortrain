@@ -1,5 +1,9 @@
 package tensortrain.utils;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -7,6 +11,7 @@ import java.util.List;
 
 import Jama.Matrix;
 import Jama.SingularValueDecomposition;
+import au.com.bytecode.opencsv.CSVWriter;
 import tensortrain.datatype.Vec;
 import tensortrain.message.USTuple;
 /**
@@ -166,7 +171,7 @@ public class MyUtils {
         boolean converged = true;
 
         //一次round-robin循环，一次sweep来正交化矩阵
-        for(int i = 0; i < block1.getColumnDimension() ; i++) {
+        for(int i = 0; i < block1.getColumnDimension(); i++) {
             for(int j = 0; j < block2.getColumnDimension(); j++) {
                 Vec di = from1DArray(getCol(block1, i));
                 Vec dj = from1DArray(getCol(block2, j));
@@ -211,9 +216,12 @@ public class MyUtils {
             boolean con = innerOrth(U1, U2, tol);
             if (con) {
             	//============================================//
-//            	System.out.println("未归一化之前的矩阵：");
-//            	U.print(10, 4);
-//            	System.out.println("#############################################");
+            	System.out.println("未归一化之前的矩阵：");
+            	U1.print(10, 4);
+            	U2.print(10, 4);
+            	System.out.println("#############################################");
+            	double d =from1DArray(getCol(U1, 0)).dot(from1DArray(getCol(U2, 0)));
+            	System.out.println(d);
             	Matrix U = add(U1, U2);
             	normVecList = new ArrayList<Tuple>();
 
@@ -316,4 +324,141 @@ public class MyUtils {
 		return result;
 	}
 	
+	public static Matrix getDiagonalMatrix(double[] data){
+		Matrix result = new Matrix(data.length, data.length);
+		for(int i = 0; i < data.length; i++){
+			for(int j = 0; j < data.length; j++){
+				if(i == j){
+					result.set(i, j, data[i]);
+				}else{
+					result.set(i ,j, 0);
+				}
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * 不同的截取方式
+	 * @param U1
+	 * @param U2
+	 * @param tol
+	 * @return
+	 */
+	public static USTuple doInnerOrth2(Matrix U1, Matrix U2, double tol) {
+		int maxSteps = 1000;
+		List<Tuple> normVecList = null;
+		USTuple result = null;
+
+		for (int i = 0; i < maxSteps; i++) {
+			boolean con = innerOrth(U1, U2, tol);
+			if (con || i == maxSteps -1) {
+				Matrix U = add(U1, U2);
+				normVecList = new ArrayList<Tuple>();
+
+				for (int j = 0; j < U.getColumnDimension(); j++) {
+					Vec colVec = from1DArray(getCol(U, j));
+					double norm = colVec.norm();
+					normVecList.add(new Tuple(norm, colVec.divide(norm)));
+				}
+
+				// 对存放Tuple的list进行排序，按照降序顺序
+				// normVecList.sort(new TupleComparator());
+				Collections.sort(normVecList, new TupleComparator());
+
+				for (int j = 0; j < U.getColumnDimension(); j++) {
+					for (int k = 0; k < U.getRowDimension(); k++) {
+						double data = normVecList.get(j).getVector().get(k);
+						U.set(k, j, data);
+					}
+					// System.out.println(normVecList.get(j).getNorm());
+				}
+				// ======================================================//
+//				System.out.println("未裁剪的u================================");
+//				U.print(10, 4);
+//				System.out.println("对应的S");
+//				for (int ii = 0; ii < normVecList.size(); ii++) {
+//					System.out.print(normVecList.get(ii).getNorm() + "   ");
+//				}
+//				System.out.println();
+				// =======================================================//
+				int uRow = U.getRowDimension();
+				int uCol = U.getColumnDimension();
+				int sSize = Math.min(uRow, uCol);
+				Matrix uMatrix = U.getMatrix(0, uRow - 1, 0, sSize - 1);
+				double[] sData = new double[sSize];
+				for (int ii = 0; ii < sSize; ii++) {
+					sData[ii] = normVecList.get(ii).norm;
+				}
+				Matrix sMatrix = getDiagonalMatrix(sData);
+				result = new USTuple(uMatrix, sMatrix);
+				break;
+			}
+		}
+		return result;
+	}
+	 public static void doInnerOrth(Matrix U, double tol) {
+	        int maxSteps = 1000;
+
+	        for (int i = 0; i < maxSteps; i++) {
+//	            log.info("In Step: " + i);
+	            boolean con = innerOrth(U, tol);
+	            if (con) {
+//	                log.info(address + " : Converged With steps of: " + i);
+	                break;
+	            }
+	        }
+	    }
+
+	    private static boolean innerOrth(Matrix block, double tol) {
+	        Matrix uMatrix = block;
+	        boolean converged = true;
+
+	        //一次round-robin循环，一次sweep来正交化矩阵
+	        for(int i = 0; i < block.getColumnDimension() -1; i++) {
+	            for(int j = i+1; j < block.getColumnDimension(); j++) {
+	                Vec di = from1DArray(getCol(block, i));
+	                Vec dj = from1DArray(getCol(block, j));
+	                double dii = di.dot(di);
+	                double dij = di.dot(dj);
+	                double djj = dj.dot(dj);
+
+	                //如果存在两列之间的正交化结果大于误差值，则判定为按照该模展开的矩阵未收敛
+	                if (Math.abs(dij) > tol) {
+	                    converged = false;
+
+	                    double tao = (djj - dii) / (2 * dij);
+	                    double t = Math.signum(tao) / (Math.abs(tao) + Math.sqrt(Math.pow(tao, 2) + 1));
+	                    double c = 1.0 / Math.sqrt(Math.pow(t, 2) + 1);
+	                    double s = t * c;
+
+	                    //update data block
+	                    //乘以旋转矩阵
+	                    for(int k = 0; k < block.getRowDimension(); k++) {
+	                        double res1 = block.get(k, i) * c - block.get(k, j) * s;
+	                        double res2 = block.get(k, i) * s + block.get(k, j) * c;
+	                        uMatrix.set(k,i,res1);
+	                        uMatrix.set(k,j,res2);
+	                    }
+
+	                }
+	            }
+	        }
+	        return converged;
+	    }
+	    
+	    public static void writeMatrixToFile(Matrix matrix, String filename) throws IOException {
+	        File path = new File(filename+".csv");	        	
+	        Writer writer = new FileWriter(path);
+	        CSVWriter csvWriter = new CSVWriter(writer);
+
+	        String[] temp = new String[matrix.getArray()[0].length];
+	        for(double[] x : matrix.getArray()) {
+	            for (int i = 0; i < temp.length; i++) {
+	                temp[i] = String.valueOf(x[i]);
+	            }
+	            csvWriter.writeNext(temp);
+	        }
+	        csvWriter.close();
+	    }
 }

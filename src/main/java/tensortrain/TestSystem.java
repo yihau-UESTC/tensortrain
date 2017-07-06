@@ -10,7 +10,7 @@ public class TestSystem {
 	public static void main(String[] args) {
 		ActorSystem system = ActorSystem.create("test");
 		ActorRef actor = system.actorOf(Props.create(TestActor.class), "no.1");
-		actor.tell("hello",ActorRef.noSender());
+		actor.tell(null,ActorRef.noSender());
 		
 	}
 

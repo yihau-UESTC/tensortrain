@@ -2,6 +2,8 @@ package tensortrain.actor;
 
 import java.util.ArrayList;
 
+import org.apache.log4j.Logger;
+
 import Jama.Matrix;
 import akka.actor.ActorRef;
 import akka.actor.Address;
@@ -32,6 +34,7 @@ import tensortrain.utils.ActorLoadBalance;
  */
 public class SplitAndMergeWorker extends UntypedActor{
 	LoggingAdapter log = Logging.getLogger(getContext().system(), this);
+//	private static Logger logger = Logger.getLogger(SplitAndMergeWorker.class);
 	private ActorRef mainThread = null;
 //	private Tensor originTensor;
 //	private int rank;
@@ -63,6 +66,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 	public void preStart() throws Exception {
 		// TODO Auto-generated method stub
 		super.preStart();
+//		log.info(getSelf()+"has been constructed!!!");
 		log.info(getSelf()+"has been constructed!!!");
 	}
 
@@ -104,6 +108,7 @@ public class SplitAndMergeWorker extends UntypedActor{
 			}
 		}else if(message instanceof OrthoFinish){
 			//统计svd完成的块，控制其两两合并
+			log.info(message.toString() + "OrthoFinish " + allMergeCount );
 			allMergeCount++;
 			if (allMergeCount < allMergeNum) {
 				oneMergeCount++;
@@ -123,11 +128,13 @@ public class SplitAndMergeWorker extends UntypedActor{
 			//将U矩阵发送给各个下层计算节点
 			UMatrix matrix = (UMatrix) message;
 			System.out.println("第"+ step +"个TT核");
+			System.out.println("Row: "+ matrix.getuMatrix().getRowDimension());
+			System.out.println("Col: "+ matrix.getuMatrix().getColumnDimension());
 			matrix.getuMatrix().print(10, 4);
 			Iterable<ActorRef> iterable = getContext().children();
 			Iterator<ActorRef> actorRefs = iterable.iterator();
-			System.out.println("+++++++++++++uMatrix++++++++++++++++++");
-			matrix.getuMatrix().print(10, 4);
+//			System.out.println("+++++++++++++uMatrix++++++++++++++++++");
+//			matrix.getuMatrix().print(10, 4);
 			while(actorRefs.hasNext()){
 				ActorRef oneActor = actorRefs.next();
 				oneActor.tell(matrix, ActorRef.noSender());
