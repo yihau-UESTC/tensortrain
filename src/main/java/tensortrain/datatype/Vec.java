@@ -16,6 +16,11 @@ public class Vec implements Serializable{
         this.size = size;
         vector = new ArrayList<Double>(size);
     }
+    public static Vec getZeroVec(int size) {
+        double[] data = new double[size];
+        return Vec.fromArray(data);
+    }
+    
 
     public double norm() {
         double result = 0;
@@ -103,7 +108,9 @@ public class Vec implements Serializable{
         Vec v4 = v1.divide(3);
         System.out.println(v4);
         System.out.println(v4.norm());
-
+        double[] data = new double[5];
+        Vec v5 = Vec.fromArray(data);
+        System.out.println(v5);
     }
 
 }

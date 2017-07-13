@@ -13,6 +13,7 @@ import Jama.Matrix;
 import Jama.SingularValueDecomposition;
 import au.com.bytecode.opencsv.CSVWriter;
 import tensortrain.datatype.Vec;
+import tensortrain.message.ModifyMatrix;
 import tensortrain.message.USTuple;
 /**
  * 
@@ -148,17 +149,19 @@ public class MyUtils {
 	public static void main(String[] args){
 		double[][] data = {{1,2,3},{4,5,6}};
 		Matrix m = new Matrix(data);
-		USTuple t1 = svd(m);
-		t1.getuMatrix().print(10, 4);
-		t1.getsMatrix().print(10, 4);
-		double[][] data2 = {{7,8,9},{10,11,12}};
-		Matrix m2 = new Matrix(data2);
-		USTuple t2 = svd(m2);
-		t2.getuMatrix().print(10, 4);
-		t2.getsMatrix().print(10, 4);
-		USTuple tuple = doInnerOrth(t1.getuMatrix().times(t1.getsMatrix()),
-				t2.getuMatrix().times(t2.getsMatrix()),0.001);
+		USTuple tuple = doInnerOrth(m, 1e-10);
 		tuple.getuMatrix().print(10, 4);
+//		USTuple t1 = svd(m);
+//		t1.getuMatrix().print(10, 4);
+//		t1.getsMatrix().print(10, 4);
+//		double[][] data2 = {{7,8,9},{10,11,12}};
+//		Matrix m2 = new Matrix(data2);
+//		USTuple t2 = svd(m2);
+//		t2.getuMatrix().print(10, 4);
+//		t2.getsMatrix().print(10, 4);
+//		USTuple tuple = doInnerOrth(t1.getuMatrix().times(t1.getsMatrix()),
+//				t2.getuMatrix().times(t2.getsMatrix()),0.001);
+//		tuple.getuMatrix().print(10, 4);
 	}
 	/**
 	 * 对矩阵m做一次sweep来正交化矩阵
@@ -359,7 +362,11 @@ public class MyUtils {
 				for (int j = 0; j < U.getColumnDimension(); j++) {
 					Vec colVec = from1DArray(getCol(U, j));
 					double norm = colVec.norm();
+					if(norm > tol){
 					normVecList.add(new Tuple(norm, colVec.divide(norm)));
+					}else{
+						normVecList.add(new Tuple(0,Vec.getZeroVec(U.getColumnDimension())));
+					}
 				}
 
 				// 对存放Tuple的list进行排序，按照降序顺序
@@ -397,17 +404,68 @@ public class MyUtils {
 		}
 		return result;
 	}
-	 public static void doInnerOrth(Matrix U, double tol) {
+	 public static USTuple doInnerOrth(Matrix U, double tol) {
 	        int maxSteps = 1000;
-
+	        List<Tuple> normVecList = null;
+			USTuple result = null;
 	        for (int i = 0; i < maxSteps; i++) {
 //	            log.info("In Step: " + i);
 	            boolean con = innerOrth(U, tol);
-	            if (con) {
-//	                log.info(address + " : Converged With steps of: " + i);
-	                break;
-	            }
-	        }
+	           
+	            if (con || i == maxSteps -1) {
+	            	 System.out.println("////////////////////////////////");
+	 	            U.print(10, 20);
+	 	            System.out.println("////////////////////////////////");
+					normVecList = new ArrayList<Tuple>();
+
+					for (int j = 0; j < U.getColumnDimension(); j++) {
+						Vec colVec = from1DArray(getCol(U, j));
+						double norm = colVec.norm();
+						if(norm > tol){
+						normVecList.add(new Tuple(norm, colVec.divide(norm)));
+						}else{
+							normVecList.add(new Tuple(0,Vec.getZeroVec(U.getRowDimension())));
+						}
+					}
+
+					// 对存放Tuple的list进行排序，按照降序顺序
+					// normVecList.sort(new TupleComparator());
+					Collections.sort(normVecList, new TupleComparator());
+					for(int a = 0; a < normVecList.size(); a ++){
+						System.out.println(normVecList.get(a).vector+"  "+normVecList.get(a).norm);
+					}
+					
+					for (int j = 0; j < U.getColumnDimension(); j++) {
+						for (int k = 0; k < U.getRowDimension(); k++) {
+							double data = normVecList.get(j).getVector().get(k);
+							U.set(k, j, data);
+						}
+						// System.out.println(normVecList.get(j).getNorm());
+					}
+					// ======================================================//
+//					System.out.println("未裁剪的u================================");
+//					U.print(10, 4);
+//					System.out.println("对应的S");
+//					for (int ii = 0; ii < normVecList.size(); ii++) {
+//						System.out.print(normVecList.get(ii).getNorm() + "   ");
+//					}
+//					System.out.println();
+					// =======================================================//
+					int uRow = U.getRowDimension();
+					int uCol = U.getColumnDimension();
+					int sSize = Math.min(uRow, uCol);
+//					int sSize = normVecList.size();
+					Matrix uMatrix = U.getMatrix(0, uRow - 1, 0, sSize - 1);
+					double[] sData = new double[sSize];
+					for (int ii = 0; ii < sSize; ii++) {
+						sData[ii] = normVecList.get(ii).norm;
+					}
+					Matrix sMatrix = getDiagonalMatrix(sData);
+					result = new USTuple(uMatrix, sMatrix);
+					break;
+				}
+			}
+			return result;
 	    }
 
 	    private static boolean innerOrth(Matrix block, double tol) {
@@ -461,4 +519,29 @@ public class MyUtils {
 	        }
 	        csvWriter.close();
 	    }
+	    
+	    /**
+		 * 将list中的矩阵按行排列成一个大的矩阵
+		 * @param list
+		 * @return
+		 */
+		public static Matrix composeByRowMatrix(ArrayList<Matrix> list){
+			int col = list.get(0).getColumnDimension();
+			int row = 0;
+			for (Matrix matrix : list) {
+				row += matrix.getRowDimension();
+			}
+			Matrix composeMatrix = new Matrix(row, col);
+			int rowInitial = 0;
+			int rowFinal = 0;
+			int colInitial = 0;
+			int colFinal = col - 1;
+				for(int j = 0; j < list.size(); j++){				
+						rowFinal = rowInitial + list.get(j).getRowDimension() - 1;
+						composeMatrix.setMatrix(rowInitial, rowFinal, colInitial, colFinal, list.get(j));
+						rowInitial = rowFinal + 1; 
+				}
+				
+			return composeMatrix;
+		}
 }
